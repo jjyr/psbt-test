@@ -73,13 +73,15 @@ end
 # start
 def run
   addr = ARGV[0]
+  client_amt = ARGV[1] || 29000
+  channel_amt = ARGV[2] || 57202
   if !addr || addr.empty?
-    puts "Need funding addr in argv 0"
+    puts "USAGE: cmd <funding addr> <client amt> <channel amt>"
     return
   end
   puts "Funding to #{addr}"
-  f0_amt = 29000
-  f1_amt = 57202
+  f0_amt = client_amt
+  f1_amt = channel_amt
   result = JSON.parse fund_0(addr, f0_amt), decimal_class: BigDecimal
   psbt = decode_psbt result['psbt']
   puts "decoded", JSON.pretty_generate(psbt)
