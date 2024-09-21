@@ -6,7 +6,7 @@ WALLETS = ["test", "test2"]
 DATADIR = "/home/jjy/bitcoin-testnet"
 
 def bitcoin_cmd(cmd)
-  puts "Exec #{cmd} =>"
+  puts "Exec #{cmd}", "=>"
   `bitcoin-cli -datadir=#{DATADIR} -testnet #{cmd}`
 end
 
@@ -45,7 +45,7 @@ def fund_1 addr, sats, psbt
   load_wallet WALLETS[1]
   amt = sat_to_btc sats
 
-  solving_data = {"pubkeys": [], "descriptors": []}
+  solving_data = {"pubkeys": [], "scripts": [], "descriptors": []}
 
   # find inputs from psbt
   inputs = psbt["tx"]["vin"].map do |vin|
@@ -56,8 +56,14 @@ def fund_1 addr, sats, psbt
   psbt["tx"]["vout"].each do |vout|
     vout_addr = vout["scriptPubKey"]["address"]
     if vout_addr.downcase != addr.downcase
-      #witness_v1_taproot
-      #solving_data[:"pubkeys"] << vout["scriptPubKey"]["hex"]
+      case vout["scriptPubKey"]["type"]
+      when "witness_v0_keyhash"
+        solving_data[:"pubkeys"] << vout["scriptPubKey"]["hex"]
+      when "witness_v1_taproot"
+        solving_data[:"scripts"] << vout["scriptPubKey"]["hex"]
+      else
+        raise "unknown pubkey type", vout
+      end
       solving_data[:"descriptors"] << vout["scriptPubKey"]["desc"]
       outputs << {"#{vout_addr}": vout["value"]}
     end
@@ -67,7 +73,8 @@ def fund_1 addr, sats, psbt
 
   options = {"add_inputs": true, "solving_data": solving_data}
 
-  bitcoin_cmd "walletcreatefundedpsbt #{Shellwords.escape inputs.to_json} #{Shellwords.escape outputs.to_json} 0 #{ Shellwords.escape options.to_json}"
+  result = JSON.parse(bitcoin_cmd("walletcreatefundedpsbt #{Shellwords.escape inputs.to_json} #{Shellwords.escape outputs.to_json} 0 #{ Shellwords.escape options.to_json}"), decimal_class: BigDecimal)
+  bitcoin_cmd "utxoupdatepsbt #{result['psbt']}"
 end
 
 # start
