@@ -77,6 +77,14 @@ def fund_1 addr, sats, psbt
   bitcoin_cmd "utxoupdatepsbt #{result['psbt']}"
 end
 
+def sign psbt
+  WALLETS.each do |w|
+    load_wallet w
+    psbt = JSON.parse(bitcoin_cmd("walletprocesspsbt #{psbt}"))["psbt"]
+  end
+  psbt
+end
+
 # start
 def run
   addr = ARGV[0]
@@ -93,7 +101,9 @@ def run
   psbt = decode_psbt result['psbt']
   puts "decoded", JSON.pretty_generate(psbt)
   result = fund_1 addr, f1_amt, psbt
-  puts result
+  puts "psbt =>", result
+  result = sign result
+  puts "signed psbt =>", result
 end
 
 run
